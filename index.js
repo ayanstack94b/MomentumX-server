@@ -1,7 +1,10 @@
-const express = require("express");
 require("dotenv").config();
+
+const express = require("express");
 const cors = require("cors");
-const { client, connectDB } = require("./config/db");
+const { toNodeHandler } = require("better-auth/node");
+const { connectDB } = require("./config/db");
+const { auth } = require("./lib/auth");
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -16,15 +19,12 @@ app.use(
 
 app.use(express.json());
 
-connectDB();
-
-
 // Routes
 app.get("/", (req, res) => {
   res.send("MomentumX Server Running");
 });
-
-
+app.use("/api/auth", toNodeHandler(auth));
+// app.all("/api/auth/:path(*)", toNodeHandler(auth));
 
 connectDB();
 // Server
