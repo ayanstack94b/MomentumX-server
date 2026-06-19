@@ -1,5 +1,5 @@
 require("dotenv").config();
-
+const { ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
 const { toNodeHandler } = require("better-auth/node");
@@ -79,6 +79,25 @@ app.post("/users", async (req, res) => {
   }
 
   const result = await usersCollection.insertOne(user);
+
+  res.send(result);
+});
+
+
+// updating data 
+app.patch("/users/:id", async (req, res) => {
+  const id = req.params.id;
+  const updatedData = req.body;
+
+  const query = {
+    _id: new ObjectId(id),
+  };
+
+  const updateDoc = {
+    $set: updatedData,
+  };
+
+  const result = await usersCollection.updateOne(query, updateDoc);
 
   res.send(result);
 });
