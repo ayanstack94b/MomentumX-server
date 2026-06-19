@@ -83,6 +83,18 @@ app.get("/classes/:id", async (req, res) => {
   res.send(result);
 });
 
+app.get("/classes/trainer/:email", async (req, res) => {
+  const email = req.params.email;
+
+  const query = {
+    trainerEmail: email,
+  };
+
+  const result = await classesCollection.find(query).toArray();
+
+  res.send(result);
+});
+
 // Create User
 app.post("/users", async (req, res) => {
   const user = req.body;
