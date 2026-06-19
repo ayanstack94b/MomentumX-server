@@ -34,7 +34,7 @@ const db = client.db("momentumxDB");
 
 // Users Collection
 const usersCollection = db.collection("users");
-
+const classesCollection = client.db("momentumxDB").collection("classes");
 /* -----------------------------
    Basic Routes
 ------------------------------ */
@@ -64,6 +64,25 @@ app.get("/users/:email", async (req, res) => {
   res.send(user);
 });
 
+// Creating classes
+app.get("/classes", async (req, res) => {
+  const result = await classesCollection.find().toArray();
+
+  res.send(result);
+});
+
+app.get("/classes/:id", async (req, res) => {
+  const id = req.params.id;
+
+  const query = {
+    _id: new ObjectId(id),
+  };
+
+  const result = await classesCollection.findOne(query);
+
+  res.send(result);
+});
+
 // Create User
 app.post("/users", async (req, res) => {
   const user = req.body;
@@ -79,6 +98,14 @@ app.post("/users", async (req, res) => {
   }
 
   const result = await usersCollection.insertOne(user);
+
+  res.send(result);
+});
+
+app.post("/classes", async (req, res) => {
+  const classData = req.body;
+
+  const result = await classesCollection.insertOne(classData);
 
   res.send(result);
 });
