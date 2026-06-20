@@ -122,8 +122,7 @@ app.post("/classes", async (req, res) => {
   res.send(result);
 });
 
-
-// updating data 
+// updating data
 app.patch("/users/:id", async (req, res) => {
   const id = req.params.id;
   const updatedData = req.body;
@@ -132,15 +131,52 @@ app.patch("/users/:id", async (req, res) => {
     _id: new ObjectId(id),
   };
 
-  const updateDoc = {
-    $set: updatedData,
-  };
+const updateDoc = {
+  $set: {
+    difficulty: updatedClass.difficulty,
+    duration: updatedClass.duration,
+    schedule: updatedClass.schedule,
+    price: updatedClass.price,
+    description: updatedClass.description,
+  },
+};
 
   const result = await usersCollection.updateOne(query, updateDoc);
 
   res.send(result);
 });
 
+app.patch("/classes/:id", async (req, res) => {
+  const id = req.params.id;
+  const updatedClass = req.body;
+
+  delete updatedClass._id;
+
+  const query = {
+    _id: new ObjectId(id),
+  };
+
+  const updateDoc = {
+    $set: updatedClass,
+  };
+
+  const result = await classesCollection.updateOne(query, updateDoc);
+
+  res.send(result);
+});
+
+// Delete route
+app.delete("/classes/:id", async (req, res) => {
+  const id = req.params.id;
+
+  const query = {
+    _id: new ObjectId(id),
+  };
+
+  const result = await classesCollection.deleteOne(query);
+
+  res.send(result);
+});
 /* -----------------------------
    Better Auth Routes
 ------------------------------ */
