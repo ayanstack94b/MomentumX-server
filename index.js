@@ -29,9 +29,11 @@ app.use(express.json());
 
 // MomentumX Database
 const db = client.db("momentumxDB");
+
 // Users Collection
 const usersCollection = db.collection("users");
 const classesCollection = client.db("momentumxDB").collection("classes");
+
 // Booking collection
 const bookingsCollection = client.db("momentumxDB").collection("bookings");
 const trainerApplicationsCollection = db.collection("trainerApplications");
@@ -109,8 +111,9 @@ app.get("/trainer-applications/:email", async (req, res) => {
     email,
   });
 
-  res.send(result);
+  res.json(result || null);
 });
+
 
 // Create User
 app.post("/users", async (req, res) => {
@@ -193,6 +196,16 @@ app.patch("/classes/:id", async (req, res) => {
 
 app.post("/trainer-applications", async (req, res) => {
   const application = req.body;
+
+  const existingApplication = await trainerApplicationsCollection.findOne({
+    email: application.email,
+  });
+
+  if (existingApplication && existingApplication.status !== "rejected") {
+    return res.status(400).send({
+      message: "Application already exists",
+    });
+  }
 
   const result = await trainerApplicationsCollection.insertOne(application);
 
