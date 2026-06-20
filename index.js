@@ -25,24 +25,27 @@ app.use(
 
 app.use(express.json());
 
-/* -----------------------------
-   MongoDB Collections
------------------------------- */
+/* -----------------------------MongoDB Collections------------------------ */
 
 // MomentumX Database
 const db = client.db("momentumxDB");
-
 // Users Collection
 const usersCollection = db.collection("users");
 const classesCollection = client.db("momentumxDB").collection("classes");
-/* -----------------------------
-   Basic Routes
------------------------------- */
+// Booking collection
+const bookingsCollection = client.db("momentumxDB").collection("bookings");
+const trainerApplicationsCollection = db.collection("trainerApplications");
+
+/* ----------------------------- Basic Routes------------------------------ */
 
 app.get("/", (req, res) => {
   res.send("MomentumX Server is Running");
 });
+app.get("/bookings", async (req, res) => {
+  const result = await bookingsCollection.find().toArray();
 
+  res.send(result);
+});
 /* -----------------------------
    User Routes
 ------------------------------ */
@@ -66,7 +69,11 @@ app.get("/users/:email", async (req, res) => {
 
 // Creating classes
 app.get("/classes", async (req, res) => {
-  const result = await classesCollection.find().toArray();
+  const query = {
+    status: "approved",
+  };
+
+  const result = await classesCollection.find(query).toArray();
 
   res.send(result);
 });
@@ -91,6 +98,16 @@ app.get("/classes/trainer/:email", async (req, res) => {
   };
 
   const result = await classesCollection.find(query).toArray();
+
+  res.send(result);
+});
+
+app.get("/trainer-applications/:email", async (req, res) => {
+  const email = req.params.email;
+
+  const result = await trainerApplicationsCollection.findOne({
+    email,
+  });
 
   res.send(result);
 });
@@ -122,6 +139,21 @@ app.post("/classes", async (req, res) => {
   res.send(result);
 });
 
+app.post("/bookings", async (req, res) => {
+  const booking = req.body;
+
+  const result = await bookingsCollection.insertOne(booking);
+
+  res.send(result);
+});
+
+app.post("/trainer-applications", async (req, res) => {
+  const application = req.body;
+
+  const result = await trainerApplicationsCollection.insertOne(application);
+
+  res.send(result);
+});
 // updating data
 app.patch("/users/:id", async (req, res) => {
   const id = req.params.id;
@@ -131,15 +163,9 @@ app.patch("/users/:id", async (req, res) => {
     _id: new ObjectId(id),
   };
 
-const updateDoc = {
-  $set: {
-    difficulty: updatedClass.difficulty,
-    duration: updatedClass.duration,
-    schedule: updatedClass.schedule,
-    price: updatedClass.price,
-    description: updatedClass.description,
-  },
-};
+  const updateDoc = {
+    $set: updatedData,
+  };
 
   const result = await usersCollection.updateOne(query, updateDoc);
 
@@ -164,6 +190,15 @@ app.patch("/classes/:id", async (req, res) => {
 
   res.send(result);
 });
+
+app.post("/trainer-applications", async (req, res) => {
+  const application = req.body;
+
+  const result = await trainerApplicationsCollection.insertOne(application);
+
+  res.send(result);
+});
+
 
 // Delete route
 app.delete("/classes/:id", async (req, res) => {
