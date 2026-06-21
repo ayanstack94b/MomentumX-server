@@ -114,6 +114,12 @@ app.get("/trainer-applications/:email", async (req, res) => {
   res.json(result || null);
 });
 
+// Get all trainers application
+app.get("/trainer-applications", async (req, res) => {
+  const result = await trainerApplicationsCollection.find().toArray();
+
+  res.send(result);
+});
 
 // Create User
 app.post("/users", async (req, res) => {
@@ -212,6 +218,51 @@ app.post("/trainer-applications", async (req, res) => {
   res.send(result);
 });
 
+// Trainer accept Reject route
+app.patch("/trainer-applications/:id", async (req, res) => {
+  const id = req.params.id;
+
+  const { status } = req.body;
+
+  const application = await trainerApplicationsCollection.findOne({
+    _id: new ObjectId(id),
+  });
+
+  if (!application) {
+    return res.status(404).send({
+      message: "Application not found",
+    });
+  }
+
+  await trainerApplicationsCollection.updateOne(
+    {
+      _id: new ObjectId(id),
+    },
+    {
+      $set: {
+        status,
+      },
+    },
+  );
+
+  if (status === "approved") {
+    await usersCollection.updateOne(
+      {
+        email: application.email,
+      },
+      {
+        $set: {
+          role: "trainer",
+        },
+      },
+    );
+  }
+
+  res.send({
+    success: true,
+    message: "Application updated",
+  });
+});
 
 // Delete route
 app.delete("/classes/:id", async (req, res) => {
