@@ -97,11 +97,11 @@ app.get("/classes/:id", async (req, res) => {
 app.get("/classes/trainer/:email", async (req, res) => {
   const email = req.params.email;
 
-  const query = {
-    trainerEmail: email,
-  };
-
-  const result = await classesCollection.find(query).toArray();
+  const result = await classesCollection
+    .find({
+      trainerEmail: email,
+    })
+    .toArray();
 
   res.send(result);
 });
