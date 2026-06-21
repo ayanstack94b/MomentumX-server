@@ -222,7 +222,7 @@ app.post("/trainer-applications", async (req, res) => {
 app.patch("/trainer-applications/:id", async (req, res) => {
   const id = req.params.id;
 
-  const { status } = req.body;
+  const { status, feedback } = req.body;
 
   const application = await trainerApplicationsCollection.findOne({
     _id: new ObjectId(id),
@@ -241,6 +241,7 @@ app.patch("/trainer-applications/:id", async (req, res) => {
     {
       $set: {
         status,
+        feedback: feedback || "",
       },
     },
   );
