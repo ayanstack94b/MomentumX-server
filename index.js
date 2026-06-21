@@ -66,6 +66,14 @@ app.get("/users/:email", async (req, res) => {
     email,
   });
 
+  if (!result) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
+
+  res.send(result);
+
   res.send(result);
 });
 
