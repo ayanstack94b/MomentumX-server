@@ -62,11 +62,11 @@ app.get("/users", async (req, res) => {
 app.get("/users/:email", async (req, res) => {
   const email = req.params.email;
 
-  const user = await usersCollection.findOne({
+  const result = await usersCollection.findOne({
     email,
   });
 
-  res.send(user);
+  res.send(result);
 });
 
 // Creating classes
