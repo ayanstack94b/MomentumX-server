@@ -63,7 +63,10 @@ app.get("/users/:email", async (req, res) => {
   const email = req.params.email;
 
   const result = await usersCollection.findOne({
-    email,
+    email: {
+      $regex: `^${email}$`,
+      $options: "i",
+    },
   });
 
   if (!result) {
