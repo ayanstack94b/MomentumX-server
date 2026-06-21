@@ -73,17 +73,11 @@ app.get("/users/:email", async (req, res) => {
   }
 
   res.send(result);
-
-  res.send(result);
 });
 
 // Creating classes
-app.get("/classes", async (req, res) => {
-  const query = {
-    status: "approved",
-  };
-
-  const result = await classesCollection.find(query).toArray();
+app.get("/admin/classes", async (req, res) => {
+  const result = await classesCollection.find().toArray();
 
   res.send(result);
 });
@@ -128,6 +122,7 @@ app.get("/trainer-applications", async (req, res) => {
 
   res.send(result);
 });
+// ===========================================================================
 
 // Create User
 app.post("/users", async (req, res) => {
@@ -190,20 +185,20 @@ app.patch("/users/:id", async (req, res) => {
 });
 
 app.patch("/classes/:id", async (req, res) => {
-  const id = req.params.id;
-  const updatedClass = req.body;
+  const { id } = req.params;
 
-  delete updatedClass._id;
+  const { status } = req.body;
 
-  const query = {
-    _id: new ObjectId(id),
-  };
-
-  const updateDoc = {
-    $set: updatedClass,
-  };
-
-  const result = await classesCollection.updateOne(query, updateDoc);
+  const result = await classesCollection.updateOne(
+    {
+      _id: new ObjectId(id),
+    },
+    {
+      $set: {
+        status,
+      },
+    },
+  );
 
   res.send(result);
 });
