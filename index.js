@@ -81,15 +81,12 @@ app.get("/admin/classes", async (req, res) => {
 
   res.send(result);
 });
-
-app.get("/classes/:id", async (req, res) => {
-  const id = req.params.id;
-
-  const query = {
-    _id: new ObjectId(id),
-  };
-
-  const result = await classesCollection.findOne(query);
+app.get("/classes", async (req, res) => {
+  const result = await classesCollection
+    .find({
+      status: "approved",
+    })
+    .toArray();
 
   res.send(result);
 });
@@ -102,6 +99,18 @@ app.get("/classes/trainer/:email", async (req, res) => {
       trainerEmail: email,
     })
     .toArray();
+
+  res.send(result);
+});
+
+app.get("/classes/:id", async (req, res) => {
+  const id = req.params.id;
+
+  const query = {
+    _id: new ObjectId(id),
+  };
+
+  const result = await classesCollection.findOne(query);
 
   res.send(result);
 });
@@ -154,15 +163,24 @@ app.post("/classes", async (req, res) => {
 app.post("/bookings", async (req, res) => {
   const booking = req.body;
 
+  if (!booking.memberEmail) {
+    return res.status(401).send({
+      message: "Login required",
+    });
+  }
+
+  const existingBooking = await bookingsCollection.findOne({
+    classId: booking.classId,
+    memberEmail: booking.memberEmail,
+  });
+
+  if (existingBooking) {
+    return res.status(400).send({
+      message: "You already booked this class",
+    });
+  }
+
   const result = await bookingsCollection.insertOne(booking);
-
-  res.send(result);
-});
-
-app.post("/trainer-applications", async (req, res) => {
-  const application = req.body;
-
-  const result = await trainerApplicationsCollection.insertOne(application);
 
   res.send(result);
 });
