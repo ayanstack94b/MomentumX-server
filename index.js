@@ -13,7 +13,6 @@ const { auth } = require("./lib/auth");
 const app = express();
 const port = process.env.PORT || 5000;
 
-
 //  Middleware
 app.use(
   cors({
@@ -163,6 +162,25 @@ app.get("/trainer-applications", async (req, res) => {
   res.send(result);
 });
 
+// Payment route
+app.get("/bookings/check", async (req, res) => {
+  const { email, classId } = req.query;
+
+  console.log("EMAIL:", email);
+  console.log("CLASSID:", classId);
+
+  const existingBooking = await bookingsCollection.findOne({
+    memberEmail: email,
+    classId: classId,
+  });
+
+  console.log("BOOKING:", existingBooking);
+
+  res.send({
+    booked: !!existingBooking,
+  });
+});
+
 app.get("/bookings/:email", async (req, res) => {
   const email = req.params.email;
 
@@ -186,6 +204,7 @@ app.get("/bookings/member/:email", async (req, res) => {
 
   res.send(result);
 });
+
 // Users favorites
 app.get("/favorites/:email", async (req, res) => {
   const email = req.params.email;
@@ -198,6 +217,8 @@ app.get("/favorites/:email", async (req, res) => {
 
   res.send(result);
 });
+
+
 
 // ==================================POST=========================================
 
@@ -331,19 +352,19 @@ app.post("/favorites", async (req, res) => {
 // Trainer accept Reject route
 app.patch("/trainer-applications/:id", async (req, res) => {
   const id = req.params.id;
-  
+
   const { status, feedback } = req.body;
-  
+
   const application = await trainerApplicationsCollection.findOne({
     _id: new ObjectId(id),
   });
-  
+
   if (!application) {
     return res.status(404).send({
       message: "Application not found",
     });
   }
-  
+
   await trainerApplicationsCollection.updateOne(
     {
       _id: new ObjectId(id),
@@ -355,7 +376,7 @@ app.patch("/trainer-applications/:id", async (req, res) => {
       },
     },
   );
-  
+
   if (status === "approved") {
     await usersCollection.updateOne(
       {
@@ -368,7 +389,7 @@ app.patch("/trainer-applications/:id", async (req, res) => {
       },
     );
   }
-  
+
   res.send({
     success: true,
     message: "Application updated",
@@ -380,7 +401,7 @@ app.patch("/trainer-applications/:id", async (req, res) => {
 // Delete route
 app.delete("/classes/:id", async (req, res) => {
   const id = req.params.id;
-  
+
   const query = {
     _id: new ObjectId(id),
   };
@@ -400,7 +421,7 @@ app.delete("/favorites/:id", async (req, res) => {
   res.send(result);
 });
 // ==================================AUTH===========================================
-  //  Better Auth Routes
+//  Better Auth Routes
 app.use("/api/auth", toNodeHandler(auth));
 
 // ================================Database==========================================
