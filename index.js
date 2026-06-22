@@ -36,6 +36,7 @@ const bookingsCollection = client.db("momentumxDB").collection("bookings");
 const trainerApplicationsCollection = db.collection("trainerApplications");
 const favoritesCollection = db.collection("favorites");
 const forumsCollection = db.collection("forums");
+const commentsCollection = db.collection("comments");
 
 /* ----------------------------- Basic Routes------------------------------ */
 
@@ -257,6 +258,21 @@ app.get("/forums/user/:email", async (req, res) => {
   res.send(result);
 });
 
+// Comments By Forum ID
+app.get("/comments/:forumId", async (req, res) => {
+  const forumId = req.params.forumId;
+
+  const result = await commentsCollection
+    .find({
+      forumId,
+    })
+    .sort({
+      createdAt: -1,
+    })
+    .toArray();
+
+  res.send(result);
+});
 // ==================================POST=========================================
 
 // Create User
@@ -392,6 +408,14 @@ app.post("/forums", async (req, res) => {
   res.send(result);
 });
 
+// Comments route
+app.post("/comments", async (req, res) => {
+  const comment = req.body;
+
+  const result = await commentsCollection.insertOne(comment);
+
+  res.send(result);
+});
 // ================================PATCH==============================================
 
 // Trainer accept Reject route
