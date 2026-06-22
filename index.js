@@ -426,6 +426,89 @@ app.patch("/trainer-applications/:id", async (req, res) => {
   });
 });
 
+// Likes and dislike
+app.patch("/forums/react/:id", async (req, res) => {
+  const { email, type } = req.body;
+
+  const forum = await forumsCollection.findOne({
+    _id: new ObjectId(req.params.id),
+  });
+
+  if (!forum) {
+    return res.status(404).send({
+      message: "Forum not found",
+    });
+  }
+
+  const likedBy = forum.likedBy || [];
+
+  const dislikedBy = forum.dislikedBy || [];
+
+  if (type === "like") {
+    if (likedBy.includes(email)) {
+      return res.status(400).send({
+        message: "Already liked",
+      });
+    }
+
+    const wasDisliked = dislikedBy.includes(email);
+
+    await forumsCollection.updateOne(
+      {
+        _id: new ObjectId(req.params.id),
+      },
+      {
+        $inc: {
+          likes: 1,
+          dislikes: wasDisliked ? -1 : 0,
+        },
+
+        $push: {
+          likedBy: email,
+        },
+
+        $pull: {
+          dislikedBy: email,
+        },
+      },
+    );
+  }
+
+  if (type === "dislike") {
+    if (dislikedBy.includes(email)) {
+      return res.status(400).send({
+        message: "Already disliked",
+      });
+    }
+
+    const wasLiked = likedBy.includes(email);
+
+    await forumsCollection.updateOne(
+      {
+        _id: new ObjectId(req.params.id),
+      },
+      {
+        $inc: {
+          dislikes: 1,
+          likes: wasLiked ? -1 : 0,
+        },
+
+        $push: {
+          dislikedBy: email,
+        },
+
+        $pull: {
+          likedBy: email,
+        },
+      },
+    );
+  }
+
+  res.send({
+    success: true,
+  });
+});
+
 // ================================DELETE=============================================
 
 // Delete route
