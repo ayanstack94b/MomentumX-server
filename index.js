@@ -48,8 +48,7 @@ app.get("/bookings", async (req, res) => {
   res.send(result);
 });
 
-// =============================GET===================================
-//  User Routes
+// =============================GET==================================
 
 // Get All Users
 app.get("/users", async (req, res) => {
@@ -238,6 +237,22 @@ app.get("/forums/:id", async (req, res) => {
   const result = await forumsCollection.findOne({
     _id: new ObjectId(id),
   });
+
+  res.send(result);
+});
+
+// Get Forum
+app.get("/forums/user/:email", async (req, res) => {
+  const email = req.params.email;
+
+  const result = await forumsCollection
+    .find({
+      authorEmail: email,
+    })
+    .sort({
+      createdAt: -1,
+    })
+    .toArray();
 
   res.send(result);
 });
@@ -528,6 +543,16 @@ app.delete("/favorites/:id", async (req, res) => {
   const id = req.params.id;
 
   const result = await favoritesCollection.deleteOne({
+    _id: new ObjectId(id),
+  });
+
+  res.send(result);
+});
+// Delete post from forum
+app.delete("/forums/:id", async (req, res) => {
+  const id = req.params.id;
+
+  const result = await forumsCollection.deleteOne({
     _id: new ObjectId(id),
   });
 
