@@ -88,6 +88,12 @@ app.get("/classes", async (req, res) => {
 
   const category = req.query.category || "";
 
+  const page = parseInt(req.query.page) || 1;
+
+  const limit = parseInt(req.query.limit) || 6;
+
+  const skip = (page - 1) * limit;
+
   const query = {
     status: "approved",
   };
@@ -103,9 +109,18 @@ app.get("/classes", async (req, res) => {
     query.category = category;
   }
 
-  const result = await classesCollection.find(query).toArray();
+  const total = await classesCollection.countDocuments(query);
 
-  res.send(result);
+  const classes = await classesCollection
+    .find(query)
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+
+  res.send({
+    total,
+    classes,
+  });
 });
 
 app.get("/classes/trainer/:email", async (req, res) => {
