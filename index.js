@@ -13,16 +13,14 @@ const { auth } = require("./lib/auth");
 const app = express();
 const port = process.env.PORT || 5000;
 
-/* -----------------------------
-   Middleware
------------------------------- */
+
+//  Middleware
 app.use(
   cors({
     origin: "http://localhost:3000",
     credentials: true,
   }),
 );
-
 app.use(express.json());
 
 /* -----------------------------MongoDB Collections------------------------ */
@@ -37,6 +35,7 @@ const classesCollection = client.db("momentumxDB").collection("classes");
 // Booking collection
 const bookingsCollection = client.db("momentumxDB").collection("bookings");
 const trainerApplicationsCollection = db.collection("trainerApplications");
+const favoritesCollection = db.collection("favorites");
 
 /* ----------------------------- Basic Routes------------------------------ */
 
@@ -48,9 +47,9 @@ app.get("/bookings", async (req, res) => {
 
   res.send(result);
 });
-/* -----------------------------
-   User Routes
------------------------------- */
+
+// =============================GET===================================
+//  User Routes
 
 // Get All Users
 app.get("/users", async (req, res) => {
@@ -127,7 +126,6 @@ app.get("/trainer-applications/:email", async (req, res) => {
 
   res.json(result || null);
 });
-
 // Get all trainers application
 app.get("/trainer-applications", async (req, res) => {
   const result = await trainerApplicationsCollection.find().toArray();
@@ -158,8 +156,20 @@ app.get("/bookings/member/:email", async (req, res) => {
 
   res.send(result);
 });
+// Users favorites
+app.get("/favorites/:email", async (req, res) => {
+  const email = req.params.email;
 
-// ===========================================================================
+  const result = await favoritesCollection
+    .find({
+      userEmail: email,
+    })
+    .toArray();
+
+  res.send(result);
+});
+
+// ==================================POST=========================================
 
 // Create User
 app.post("/users", async (req, res) => {
@@ -267,22 +277,43 @@ app.post("/trainer-applications", async (req, res) => {
   res.send(result);
 });
 
+app.post("/favorites", async (req, res) => {
+  const favorite = req.body;
+
+  const existingFavorite = await favoritesCollection.findOne({
+    classId: favorite.classId,
+    userEmail: favorite.userEmail,
+  });
+
+  if (existingFavorite) {
+    return res.status(400).send({
+      message: "Already in favorites",
+    });
+  }
+
+  const result = await favoritesCollection.insertOne(favorite);
+
+  res.send(result);
+});
+
+// ================================PATCH==============================================
+
 // Trainer accept Reject route
 app.patch("/trainer-applications/:id", async (req, res) => {
   const id = req.params.id;
-
+  
   const { status, feedback } = req.body;
-
+  
   const application = await trainerApplicationsCollection.findOne({
     _id: new ObjectId(id),
   });
-
+  
   if (!application) {
     return res.status(404).send({
       message: "Application not found",
     });
   }
-
+  
   await trainerApplicationsCollection.updateOne(
     {
       _id: new ObjectId(id),
@@ -294,7 +325,7 @@ app.patch("/trainer-applications/:id", async (req, res) => {
       },
     },
   );
-
+  
   if (status === "approved") {
     await usersCollection.updateOne(
       {
@@ -307,17 +338,19 @@ app.patch("/trainer-applications/:id", async (req, res) => {
       },
     );
   }
-
+  
   res.send({
     success: true,
     message: "Application updated",
   });
 });
 
+// ================================DELETE=============================================
+
 // Delete route
 app.delete("/classes/:id", async (req, res) => {
   const id = req.params.id;
-
+  
   const query = {
     _id: new ObjectId(id),
   };
@@ -326,22 +359,25 @@ app.delete("/classes/:id", async (req, res) => {
 
   res.send(result);
 });
-/* -----------------------------
-   Better Auth Routes
------------------------------- */
+// users favorite
+app.delete("/favorites/:id", async (req, res) => {
+  const id = req.params.id;
 
+  const result = await favoritesCollection.deleteOne({
+    _id: new ObjectId(id),
+  });
+
+  res.send(result);
+});
+// ==================================AUTH===========================================
+  //  Better Auth Routes
 app.use("/api/auth", toNodeHandler(auth));
 
-/* -----------------------------
-   Database Connection
------------------------------- */
-
+// ================================Database==========================================
+//  Database Connection
 connectDB();
 
-/* -----------------------------
-   Start Server
------------------------------- */
-
+//  Start Server
 app.listen(port, () => {
   console.log(`MomentumX running on port ${port}`);
 });
