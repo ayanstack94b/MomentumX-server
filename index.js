@@ -548,6 +548,24 @@ app.patch("/forums/react/:id", async (req, res) => {
   });
 });
 
+// edit a comment
+app.patch("/comments/:id", async (req, res) => {
+  const { comment } = req.body;
+
+  const result = await commentsCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.id),
+    },
+    {
+      $set: {
+        comment,
+      },
+    },
+  );
+
+  res.send(result);
+});
+
 // ================================DELETE=============================================
 
 // Delete route
@@ -582,6 +600,16 @@ app.delete("/forums/:id", async (req, res) => {
 
   res.send(result);
 });
+
+// Deleting a comment
+app.delete("/comments/:id", async (req, res) => {
+  const result = await commentsCollection.deleteOne({
+    _id: new ObjectId(req.params.id),
+  });
+
+  res.send(result);
+});
+
 // ==================================AUTH===========================================
 //  Better Auth Routes
 app.use("/api/auth", toNodeHandler(auth));
