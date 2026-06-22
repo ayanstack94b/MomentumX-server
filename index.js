@@ -35,6 +35,7 @@ const classesCollection = client.db("momentumxDB").collection("classes");
 const bookingsCollection = client.db("momentumxDB").collection("bookings");
 const trainerApplicationsCollection = db.collection("trainerApplications");
 const favoritesCollection = db.collection("favorites");
+const forumsCollection = db.collection("forums");
 
 /* ----------------------------- Basic Routes------------------------------ */
 
@@ -218,7 +219,28 @@ app.get("/favorites/:email", async (req, res) => {
   res.send(result);
 });
 
+// Forums
+app.get("/forums", async (req, res) => {
+  const result = await forumsCollection
+    .find()
+    .sort({
+      createdAt: -1,
+    })
+    .toArray();
 
+  res.send(result);
+});
+
+// Single forum
+app.get("/forums/:id", async (req, res) => {
+  const id = req.params.id;
+
+  const result = await forumsCollection.findOne({
+    _id: new ObjectId(id),
+  });
+
+  res.send(result);
+});
 
 // ==================================POST=========================================
 
@@ -343,6 +365,14 @@ app.post("/favorites", async (req, res) => {
   }
 
   const result = await favoritesCollection.insertOne(favorite);
+
+  res.send(result);
+});
+
+app.post("/forums", async (req, res) => {
+  const forum = req.body;
+
+  const result = await forumsCollection.insertOne(forum);
 
   res.send(result);
 });
