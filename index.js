@@ -84,11 +84,26 @@ app.get("/admin/classes", async (req, res) => {
   res.send(result);
 });
 app.get("/classes", async (req, res) => {
-  const result = await classesCollection
-    .find({
-      status: "approved",
-    })
-    .toArray();
+  const search = req.query.search || "";
+
+  const category = req.query.category || "";
+
+  const query = {
+    status: "approved",
+  };
+
+  if (search) {
+    query.className = {
+      $regex: search,
+      $options: "i",
+    };
+  }
+
+  if (category) {
+    query.category = category;
+  }
+
+  const result = await classesCollection.find(query).toArray();
 
   res.send(result);
 });
