@@ -418,6 +418,70 @@ app.post("/comments", async (req, res) => {
 });
 // ================================PATCH==============================================
 
+// Admin route
+app.patch("/users/admin/:id", async (req, res) => {
+  const result = await usersCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.id),
+    },
+    {
+      $set: {
+        role: "admin",
+      },
+    },
+  );
+
+  res.send(result);
+});
+
+// remove admin
+app.patch("/users/remove-admin/:id", async (req, res) => {
+  const result = await usersCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.id),
+    },
+    {
+      $set: {
+        role: "member",
+      },
+    },
+  );
+
+  res.send(result);
+});
+
+// Block an user
+app.patch("/users/block/:id", async (req, res) => {
+  const result = await usersCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.id),
+    },
+    {
+      $set: {
+        status: "blocked",
+      },
+    },
+  );
+
+  res.send(result);
+});
+
+// unblock an user
+app.patch("/users/unblock/:id", async (req, res) => {
+  const result = await usersCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.id),
+    },
+    {
+      $set: {
+        status: "active",
+      },
+    },
+  );
+
+  res.send(result);
+});
+
 // Trainer accept Reject route
 app.patch("/trainer-applications/:id", async (req, res) => {
   const id = req.params.id;
