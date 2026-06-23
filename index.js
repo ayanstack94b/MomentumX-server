@@ -38,6 +38,7 @@ const favoritesCollection = db.collection("favorites");
 const forumsCollection = db.collection("forums");
 const commentsCollection = db.collection("comments");
 
+
 /* ----------------------------- Basic Routes------------------------------ */
 
 app.get("/", (req, res) => {
@@ -781,7 +782,14 @@ app.delete("/classes/:id", async (req, res) => {
   res.send(result);
 });
 
+// Trainer application delete
+app.delete("/trainer-applications/:id", async (req, res) => {
+  const result = await trainerApplicationsCollection.deleteOne({
+    _id: new ObjectId(req.params.id),
+  });
 
+  res.send(result);
+});
 // ==================================AUTH===========================================
 //  Better Auth Routes
 app.use("/api/auth", toNodeHandler(auth));
