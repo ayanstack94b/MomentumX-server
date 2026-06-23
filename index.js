@@ -83,6 +83,28 @@ app.get("/admin/classes", async (req, res) => {
 
   res.send(result);
 });
+
+// Admin stasts route
+app.get("/admin/stats", async (req, res) => {
+  const totalUsers = await usersCollection.countDocuments();
+
+  const totalTrainers = await usersCollection.countDocuments({
+    role: "trainer",
+  });
+
+  const totalClasses = await classesCollection.countDocuments();
+
+  const totalPosts = await forumsCollection.countDocuments();
+
+  res.send({
+    totalUsers,
+    totalTrainers,
+    totalClasses,
+    totalPosts,
+  });
+});
+
+// all classes
 app.get("/classes", async (req, res) => {
   const search = req.query.search || "";
 
@@ -146,7 +168,7 @@ app.get("/classes/:id", async (req, res) => {
 
   res.send(result);
 });
-
+// All trainer routes
 app.get("/trainer-applications/:email", async (req, res) => {
   const email = req.params.email;
 
