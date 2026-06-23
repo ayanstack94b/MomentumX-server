@@ -566,6 +566,43 @@ app.patch("/comments/:id", async (req, res) => {
   res.send(result);
 });
 
+//Add reply to comments
+app.patch("/comments/reply/:id", async (req, res) => {
+  const reply = req.body;
+
+  const result = await commentsCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.id),
+    },
+    {
+      $push: {
+        replies: reply,
+      },
+    },
+  );
+
+  res.send(result);
+}); 
+
+// Delete replies
+app.patch("/comments/reply/delete/:commentId", async (req, res) => {
+  const { replyId } = req.body;
+
+  const result = await commentsCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.commentId),
+    },
+    {
+      $pull: {
+        replies: {
+          _id: replyId,
+        },
+      },
+    },
+  );
+
+  res.send(result);
+});
 // ================================DELETE=============================================
 
 // Delete route
@@ -610,6 +647,42 @@ app.delete("/comments/:id", async (req, res) => {
   res.send(result);
 });
 
+// edit comment
+app.patch("/comments/reply/edit/:commentId", async (req, res) => {
+  const { replyId, reply } = req.body;
+
+  const comment = await commentsCollection.findOne({
+    _id: new ObjectId(req.params.commentId),
+  });
+
+  if (!comment) {
+    return res.status(404).send({
+      message: "Comment not found",
+    });
+  }
+
+  const updatedReplies = (comment.replies || []).map((item) =>
+    item._id === replyId
+      ? {
+          ...item,
+          reply,
+        }
+      : item,
+  );
+
+  const result = await commentsCollection.updateOne(
+    {
+      _id: new ObjectId(req.params.commentId),
+    },
+    {
+      $set: {
+        replies: updatedReplies,
+      },
+    },
+  );
+
+  res.send(result);
+});
 // ==================================AUTH===========================================
 //  Better Auth Routes
 app.use("/api/auth", toNodeHandler(auth));
