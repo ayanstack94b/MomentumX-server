@@ -262,16 +262,28 @@ app.get("/favorites/:email", async (req, res) => {
 
 // Forums
 app.get("/forums", async (req, res) => {
-  const result = await forumsCollection
+  const page = parseInt(req.query.page) || 1;
+
+  const limit = parseInt(req.query.limit) || 6;
+
+  const skip = (page - 1) * limit;
+
+  const total = await forumsCollection.countDocuments();
+
+  const forums = await forumsCollection
     .find()
     .sort({
       createdAt: -1,
     })
+    .skip(skip)
+    .limit(limit)
     .toArray();
 
-  res.send(result);
+  res.send({
+    total,
+    forums,
+  });
 });
-
 // Single forum
 app.get("/forums/:id", async (req, res) => {
   const id = req.params.id;
