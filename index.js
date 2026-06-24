@@ -134,11 +134,14 @@ app.get("/classes", async (req, res) => {
 
   const total = await classesCollection.countDocuments(query);
 
-  const classes = await classesCollection
-    .find(query)
-    .skip(skip)
-    .limit(limit)
-    .toArray();
+const classes = await classesCollection
+  .find(query)
+  .sort({
+    createdAt: -1,
+  })
+  .skip(skip)
+  .limit(limit)
+  .toArray();
 
   res.send({
     total,
@@ -223,6 +226,21 @@ app.get("/bookings/member/:email", async (req, res) => {
   const result = await bookingsCollection
     .find({
       memberEmail: email,
+    })
+    .toArray();
+
+  res.send(result);
+});
+
+app.get("/bookings/class/:classId", async (req, res) => {
+  const classId = req.params.classId;
+
+  const result = await bookingsCollection
+    .find({ classId })
+    .project({
+      memberName: 1,
+      memberEmail: 1,
+      _id: 0,
     })
     .toArray();
 
@@ -349,42 +367,6 @@ app.post("/bookings", async (req, res) => {
 
   res.send(result);
 });
-// updating data
-app.patch("/users/:id", async (req, res) => {
-  const id = req.params.id;
-  const updatedData = req.body;
-
-  const query = {
-    _id: new ObjectId(id),
-  };
-
-  const updateDoc = {
-    $set: updatedData,
-  };
-
-  const result = await usersCollection.updateOne(query, updateDoc);
-
-  res.send(result);
-});
-
-app.patch("/classes/:id", async (req, res) => {
-  const { id } = req.params;
-
-  const { status } = req.body;
-
-  const result = await classesCollection.updateOne(
-    {
-      _id: new ObjectId(id),
-    },
-    {
-      $set: {
-        status,
-      },
-    },
-  );
-
-  res.send(result);
-});
 
 app.post("/trainer-applications", async (req, res) => {
   const application = req.body;
@@ -498,6 +480,43 @@ app.patch("/users/unblock/:id", async (req, res) => {
     {
       $set: {
         status: "active",
+      },
+    },
+  );
+
+  res.send(result);
+});
+
+// updating data
+app.patch("/users/:id", async (req, res) => {
+  const id = req.params.id;
+  const updatedData = req.body;
+
+  const query = {
+    _id: new ObjectId(id),
+  };
+
+  const updateDoc = {
+    $set: updatedData,
+  };
+
+  const result = await usersCollection.updateOne(query, updateDoc);
+
+  res.send(result);
+});
+
+app.patch("/classes/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const { status } = req.body;
+
+  const result = await classesCollection.updateOne(
+    {
+      _id: new ObjectId(id),
+    },
+    {
+      $set: {
+        status,
       },
     },
   );
