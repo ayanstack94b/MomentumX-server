@@ -16,7 +16,10 @@ const port = process.env.PORT || 5000;
 //  Middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: [
+      "https://momentum-x-client.vercel.app",
+      "https://momentum-x-client-git-main-ayanstack94bs-projects.vercel.app",
+    ],
     credentials: true,
   }),
 );
