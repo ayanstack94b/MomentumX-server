@@ -364,6 +364,20 @@ app.post("/bookings", async (req, res) => {
     });
   }
 
+  const user = await usersCollection.findOne({
+    email: booking.memberEmail,
+  });
+
+  console.log("BOOKING EMAIL:", booking.memberEmail);
+
+  console.log("FOUND USER:", user);
+
+  if (user?.status === "blocked") {
+    return res.status(403).send({
+      message: "Blocked users cannot book classes",
+    });
+  }
+
   const existingBooking = await bookingsCollection.findOne({
     classId: booking.classId,
     memberEmail: booking.memberEmail,
@@ -428,6 +442,16 @@ app.post("/favorites", async (req, res) => {
 
 app.post("/forums", async (req, res) => {
   const forum = req.body;
+
+  const user = await usersCollection.findOne({
+    email: forum.authorEmail,
+  });
+
+  if (user?.status === "blocked") {
+    return res.status(403).send({
+      message: "Blocked users cannot create forum posts",
+    });
+  }
 
   const result = await forumsCollection.insertOne(forum);
 
