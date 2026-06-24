@@ -392,6 +392,15 @@ app.post("/trainer-applications", async (req, res) => {
       message: "Application already exists",
     });
   }
+  const user = await usersCollection.findOne({
+    email: application.email,
+  });
+
+  if (user?.status === "blocked") {
+    return res.status(403).send({
+      message: "Blocked users cannot apply as trainers",
+    });
+  }
 
   const result = await trainerApplicationsCollection.insertOne(application);
 
