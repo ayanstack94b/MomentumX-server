@@ -863,11 +863,16 @@ app.delete("/trainer-applications/:id", async (req, res) => {
 // ==================================AUTH===========================================
 //  Better Auth Routes
 // app.use("/api/auth", toNodeHandler(auth));
+
 app.use("/api/auth", (req, res, next) => {
-  console.log("================================");
-  console.log("PATH:", req.path);
-  console.log("COOKIE HEADER:", req.headers.cookie);
-  console.log("================================");
+  const originalSetHeader = res.setHeader;
+
+  res.setHeader = function (name, value) {
+    if (name.toLowerCase() === "set-cookie") {
+      console.log("SET-COOKIE:", value);
+    }
+    return originalSetHeader.call(this, name, value);
+  };
 
   return toNodeHandler(auth)(req, res, next);
 });
