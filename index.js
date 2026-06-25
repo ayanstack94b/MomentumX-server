@@ -1,4 +1,7 @@
 require("dotenv").config();
+console.log("CLIENT_URL =", process.env.CLIENT_URL);
+console.log("BETTER_AUTH_URL =", process.env.BETTER_AUTH_URL);
+
 const { ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
@@ -17,12 +20,14 @@ const port = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
+      "http://localhost:3000",
       "https://momentum-x-client.vercel.app",
       "https://momentum-x-client-git-main-ayanstack94bs-projects.vercel.app",
     ],
     credentials: true,
   }),
 );
+
 app.use(express.json());
 
 /* -----------------------------MongoDB Collections------------------------ */
@@ -40,7 +45,6 @@ const trainerApplicationsCollection = db.collection("trainerApplications");
 const favoritesCollection = db.collection("favorites");
 const forumsCollection = db.collection("forums");
 const commentsCollection = db.collection("comments");
-
 
 /* ----------------------------- Basic Routes------------------------------ */
 
@@ -137,14 +141,14 @@ app.get("/classes", async (req, res) => {
 
   const total = await classesCollection.countDocuments(query);
 
-const classes = await classesCollection
-  .find(query)
-  .sort({
-    createdAt: -1,
-  })
-  .skip(skip)
-  .limit(limit)
-  .toArray();
+  const classes = await classesCollection
+    .find(query)
+    .sort({
+      createdAt: -1,
+    })
+    .skip(skip)
+    .limit(limit)
+    .toArray();
 
   res.send({
     total,
@@ -736,7 +740,7 @@ app.patch("/comments/reply/:id", async (req, res) => {
   );
 
   res.send(result);
-}); 
+});
 
 // Delete replies
 app.patch("/comments/reply/delete/:commentId", async (req, res) => {
@@ -794,7 +798,6 @@ app.patch("/comments/reply/edit/:commentId", async (req, res) => {
 
   res.send(result);
 });
-
 
 // ================================DELETE=============================================
 
