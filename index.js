@@ -864,31 +864,31 @@ app.delete("/trainer-applications/:id", async (req, res) => {
 //  Better Auth Routes
 // app.use("/api/auth", toNodeHandler(auth));
 
-// app.use("/api/auth", (req, res, next) => {
-//   console.log("================================");
-//   console.log("PATH:", req.path);
-//   console.log("COOKIE HEADER:", req.headers.cookie);
-//   console.log("================================");
-
-//   return toNodeHandler(auth)(req, res, next);
-// });
-
 app.use("/api/auth", (req, res, next) => {
-  const originalSetHeader = res.setHeader;
-
-  res.setHeader = function (name, value) {
-    if (typeof name === "string" && name.toLowerCase() === "set-cookie") {
-      console.log("================================");
-      console.log("SET-COOKIE:");
-      console.log(value);
-      console.log("================================");
-    }
-
-    return originalSetHeader.call(this, name, value);
-  };
+  console.log("================================");
+  console.log("PATH:", req.path);
+  console.log("COOKIE HEADER:", req.headers.cookie);
+  console.log("================================");
 
   return toNodeHandler(auth)(req, res, next);
 });
+
+// app.use("/api/auth", (req, res, next) => {
+//   const originalSetHeader = res.setHeader;
+
+//   res.setHeader = function (name, value) {
+//     if (typeof name === "string" && name.toLowerCase() === "set-cookie") {
+//       console.log("================================");
+//       console.log("SET-COOKIE:");
+//       console.log(value);
+//       console.log("================================");
+//     }
+
+//     return originalSetHeader.call(this, name, value);
+//   };
+
+//   return toNodeHandler(auth)(req, res, next);
+// });
 
 // ================================Database==========================================
 //  Database Connection
