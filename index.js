@@ -1,9 +1,56 @@
 require("dotenv").config();
-console.log("CLIENT_URL =", process.env.CLIENT_URL);
-console.log("BETTER_AUTH_URL =", process.env.BETTER_AUTH_URL);
+
+const jwt = require("jsonwebtoken");
+
+const verifyJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).send({
+      message: "Unauthorized Access",
+    });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({
+        message: "Unauthorized Access",
+      });
+    }
+
+    req.decoded = decoded;
+    next();
+  });
+};
+
+const verifyAdmin = async (req, res, next) => {
+  try {
+    const user = await usersCollection.findOne({
+      email: {
+        $regex: `^${req.decoded.email}$`,
+        $options: "i",
+      },
+    });
+
+    if (!user || user.role !== "admin") {
+      return res.status(403).send({
+        message: "Forbidden Access",
+      });
+    }
+
+    next();
+  } catch (error) {
+    res.status(500).send({
+      message: "Server Error",
+    });
+  }
+};
 
 const { ObjectId } = require("mongodb");
 const express = require("express");
+console.log("SERVER FILE LOADED");
 const cors = require("cors");
 const { toNodeHandler } = require("better-auth/node");
 
@@ -51,7 +98,7 @@ const commentsCollection = db.collection("comments");
 app.get("/", (req, res) => {
   res.send("MomentumX Server is Running");
 });
-app.get("/bookings", async (req, res) => {
+app.get("/bookings", verifyJWT, async (req, res) => {
   const result = await bookingsCollection.find().toArray();
 
   res.send(result);
@@ -60,15 +107,42 @@ app.get("/bookings", async (req, res) => {
 // =============================GET==================================
 
 // Get All Users
-app.get("/users", async (req, res) => {
+app.get("/users", verifyJWT, verifyAdmin, async (req, res) => {
   const users = await usersCollection.find().toArray();
   res.send(users);
 });
 
+// All trainer routes
+app.get("/users/trainers", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    const trainers = await usersCollection
+      .find({
+        role: "trainer",
+      })
+      .sort({
+        createdAt: -1,
+      })
+      .toArray();
+
+    res.send(trainers);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).send({
+      message: "Failed to fetch trainers.",
+    });
+  }
+});
+
 // Get Single User By Email
-app.get("/users/:email", async (req, res) => {
+app.get("/users/:email", verifyJWT, async (req, res) => {
   const email = req.params.email;
 
+  if (email !== req.decoded.email) {
+    return res.status(403).send({
+      message: "Forbidden Access",
+    });
+  }
   const result = await usersCollection.findOne({
     email: {
       $regex: `^${email}$`,
@@ -86,14 +160,14 @@ app.get("/users/:email", async (req, res) => {
 });
 
 // Creating classes
-app.get("/admin/classes", async (req, res) => {
+app.get("/admin/classes", verifyJWT, verifyAdmin, async (req, res) => {
   const result = await classesCollection.find().toArray();
 
   res.send(result);
 });
 
-// Admin stasts route
-app.get("/admin/stats", async (req, res) => {
+// Admin stats route
+app.get("/admin/stats", verifyJWT, verifyAdmin, async (req, res) => {
   const totalUsers = await usersCollection.countDocuments();
 
   const totalTrainers = await usersCollection.countDocuments({
@@ -179,8 +253,19 @@ app.get("/classes/:id", async (req, res) => {
 
   res.send(result);
 });
-// All trainer routes
-app.get("/trainer-applications/:email", async (req, res) => {
+
+app.get("/classes/update/:id", verifyJWT, async (req, res) => {
+  const { id } = req.params;
+
+  const result = await classesCollection.findOne({
+    _id: new ObjectId(id),
+    trainerEmail: req.decoded.email,
+  });
+
+  res.send(result);
+});
+
+app.get("/trainer-applications/:email", verifyJWT, async (req, res) => {
   const email = req.params.email;
 
   const result = await trainerApplicationsCollection.findOne({
@@ -190,14 +275,14 @@ app.get("/trainer-applications/:email", async (req, res) => {
   res.json(result || null);
 });
 // Get all trainers application
-app.get("/trainer-applications", async (req, res) => {
+app.get("/trainer-applications", verifyJWT, async (req, res) => {
   const result = await trainerApplicationsCollection.find().toArray();
 
   res.send(result);
 });
 
 // Payment route
-app.get("/bookings/check", async (req, res) => {
+app.get("/bookings/check", verifyJWT, async (req, res) => {
   const { email, classId } = req.query;
 
   console.log("EMAIL:", email);
@@ -215,7 +300,7 @@ app.get("/bookings/check", async (req, res) => {
   });
 });
 
-app.get("/bookings/:email", async (req, res) => {
+app.get("/bookings/:email", verifyJWT, async (req, res) => {
   const email = req.params.email;
 
   const result = await bookingsCollection
@@ -227,7 +312,7 @@ app.get("/bookings/:email", async (req, res) => {
   res.send(result);
 });
 
-app.get("/bookings/member/:email", async (req, res) => {
+app.get("/bookings/member/:email", verifyJWT, async (req, res) => {
   const email = req.params.email;
 
   const result = await bookingsCollection
@@ -239,7 +324,7 @@ app.get("/bookings/member/:email", async (req, res) => {
   res.send(result);
 });
 
-app.get("/bookings/class/:classId", async (req, res) => {
+app.get("/bookings/class/:classId", verifyJWT, async (req, res) => {
   const classId = req.params.classId;
 
   const result = await bookingsCollection
@@ -255,8 +340,14 @@ app.get("/bookings/class/:classId", async (req, res) => {
 });
 
 // Users favorites
-app.get("/favorites/:email", async (req, res) => {
+app.get("/favorites/:email", verifyJWT, async (req, res) => {
   const email = req.params.email;
+
+  if (email !== req.decoded.email) {
+    return res.status(403).send({
+      message: "Forbidden Access",
+    });
+  }
 
   const result = await favoritesCollection
     .find({
@@ -303,7 +394,7 @@ app.get("/forums/:id", async (req, res) => {
 });
 
 // Get Forum
-app.get("/forums/user/:email", async (req, res) => {
+app.get("/forums/user/:email", verifyJWT, async (req, res) => {
   const email = req.params.email;
 
   const result = await forumsCollection
@@ -354,7 +445,26 @@ app.post("/users", async (req, res) => {
   res.send(result);
 });
 
-app.post("/classes", async (req, res) => {
+// Jwt route
+app.post("/jwt", async (req, res) => {
+  const { email } = req.body;
+
+  const user = await usersCollection.findOne({ email });
+
+  if (!user) {
+    return res.status(401).send({
+      message: "User not found",
+    });
+  }
+
+  const token = jwt.sign({ email }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+
+  res.send({ token });
+});
+
+app.post("/classes", verifyJWT, async (req, res) => {
   const classData = req.body;
 
   const result = await classesCollection.insertOne(classData);
@@ -362,7 +472,7 @@ app.post("/classes", async (req, res) => {
   res.send(result);
 });
 
-app.post("/bookings", async (req, res) => {
+app.post("/bookings", verifyJWT, async (req, res) => {
   const booking = req.body;
 
   if (!booking.memberEmail) {
@@ -375,13 +485,27 @@ app.post("/bookings", async (req, res) => {
     email: booking.memberEmail,
   });
 
-  console.log("BOOKING EMAIL:", booking.memberEmail);
+  if (!user) {
+    return res.status(404).send({
+      message: "User not found",
+    });
+  }
 
-  console.log("FOUND USER:", user);
-
-  if (user?.status === "blocked") {
+  if (user.role === "trainer") {
     return res.status(403).send({
-      message: "Blocked users cannot book classes",
+      message: "Trainers cannot book classes.",
+    });
+  }
+
+  if (user.role === "admin") {
+    return res.status(403).send({
+      message: "Admins cannot book classes.",
+    });
+  }
+
+  if (user.status === "blocked") {
+    return res.status(403).send({
+      message: "Blocked users cannot book classes.",
     });
   }
 
@@ -401,7 +525,7 @@ app.post("/bookings", async (req, res) => {
   res.send(result);
 });
 
-app.post("/trainer-applications", async (req, res) => {
+app.post("/trainer-applications", verifyJWT, async (req, res) => {
   const application = req.body;
 
   const existingApplication = await trainerApplicationsCollection.findOne({
@@ -428,7 +552,7 @@ app.post("/trainer-applications", async (req, res) => {
   res.send(result);
 });
 
-app.post("/favorites", async (req, res) => {
+app.post("/favorites", verifyJWT, async (req, res) => {
   const favorite = req.body;
 
   const existingFavorite = await favoritesCollection.findOne({
@@ -447,7 +571,7 @@ app.post("/favorites", async (req, res) => {
   res.send(result);
 });
 
-app.post("/forums", async (req, res) => {
+app.post("/forums", verifyJWT, async (req, res) => {
   const forum = req.body;
 
   const user = await usersCollection.findOne({
@@ -466,8 +590,18 @@ app.post("/forums", async (req, res) => {
 });
 
 // Comments route
-app.post("/comments", async (req, res) => {
+app.post("/comments", verifyJWT, async (req, res) => {
   const comment = req.body;
+
+  const user = await usersCollection.findOne({
+    email: req.decoded.email,
+  });
+
+  if (user?.status === "blocked") {
+    return res.status(403).send({
+      message: "Action restricted by Admin.",
+    });
+  }
 
   const result = await commentsCollection.insertOne(comment);
 
@@ -476,10 +610,18 @@ app.post("/comments", async (req, res) => {
 // ================================PATCH==============================================
 
 // Admin route
-app.patch("/users/admin/:id", async (req, res) => {
+app.patch("/users/admin/:id", verifyJWT, verifyAdmin, async (req, res) => {
+  const id = req.params.id;
+
+  const before = await usersCollection.findOne({
+    _id: new ObjectId(id),
+  });
+
+  console.log("BEFORE:", before);
+
   const result = await usersCollection.updateOne(
     {
-      _id: new ObjectId(req.params.id),
+      _id: new ObjectId(id),
     },
     {
       $set: {
@@ -488,27 +630,51 @@ app.patch("/users/admin/:id", async (req, res) => {
     },
   );
 
+  const after = await usersCollection.findOne({
+    _id: new ObjectId(id),
+  });
+
+  console.log("RESULT:", result);
+  console.log("AFTER:", after);
+
   res.send(result);
 });
 
 // remove admin
-app.patch("/users/remove-admin/:id", async (req, res) => {
-  const result = await usersCollection.updateOne(
-    {
-      _id: new ObjectId(req.params.id),
-    },
-    {
-      $set: {
-        role: "member",
+app.patch(
+  "/users/remove-admin/:id",
+  verifyJWT,
+  verifyAdmin,
+  async (req, res) => {
+    const result = await usersCollection.updateOne(
+      {
+        _id: new ObjectId(req.params.id),
       },
-    },
-  );
+      {
+        $set: {
+          role: "member",
+        },
+      },
+    );
 
-  res.send(result);
-});
+    res.send(result);
+  },
+);
 
 // Block an user
-app.patch("/users/block/:id", async (req, res) => {
+app.patch("/users/block/:id", verifyJWT, verifyAdmin, async (req, res) => {
+  // Find the user that is about to be blocked
+  const targetUser = await usersCollection.findOne({
+    _id: new ObjectId(req.params.id),
+  });
+
+  // Prevent admin from blocking themselves
+  if (targetUser.email === req.decoded.email) {
+    return res.status(400).send({
+      message: "You cannot block your own account.",
+    });
+  }
+
   const result = await usersCollection.updateOne(
     {
       _id: new ObjectId(req.params.id),
@@ -524,7 +690,7 @@ app.patch("/users/block/:id", async (req, res) => {
 });
 
 // unblock an user
-app.patch("/users/unblock/:id", async (req, res) => {
+app.patch("/users/unblock/:id", verifyJWT, verifyAdmin, async (req, res) => {
   const result = await usersCollection.updateOne(
     {
       _id: new ObjectId(req.params.id),
@@ -540,7 +706,7 @@ app.patch("/users/unblock/:id", async (req, res) => {
 });
 
 // updating data
-app.patch("/users/:id", async (req, res) => {
+app.patch("/users/:id", verifyJWT, async (req, res) => {
   const id = req.params.id;
   const updatedData = req.body;
 
@@ -557,7 +723,7 @@ app.patch("/users/:id", async (req, res) => {
   res.send(result);
 });
 
-app.patch("/classes/:id", async (req, res) => {
+app.patch("/classes/:id", verifyJWT, verifyAdmin, async (req, res) => {
   const { id } = req.params;
 
   const { status } = req.body;
@@ -576,55 +742,117 @@ app.patch("/classes/:id", async (req, res) => {
   res.send(result);
 });
 
-// Trainer accept Reject route
-app.patch("/trainer-applications/:id", async (req, res) => {
-  const id = req.params.id;
+app.patch("/classes/update/:id", verifyJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
 
-  const { status, feedback } = req.body;
+    const updatedData = { ...req.body };
+    delete updatedData._id;
 
-  const application = await trainerApplicationsCollection.findOne({
-    _id: new ObjectId(id),
-  });
-
-  if (!application) {
-    return res.status(404).send({
-      message: "Application not found",
-    });
-  }
-
-  await trainerApplicationsCollection.updateOne(
-    {
-      _id: new ObjectId(id),
-    },
-    {
-      $set: {
-        status,
-        feedback: feedback || "",
-      },
-    },
-  );
-
-  if (status === "approved") {
-    await usersCollection.updateOne(
+    const result = await classesCollection.updateOne(
       {
-        email: application.email,
+        _id: new ObjectId(id),
+        trainerEmail: req.decoded.email,
+      },
+      {
+        $set: updatedData,
+      },
+    );
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error.message);
+  }
+});
+
+// Trainer accept Reject route
+app.patch("/trainer-applications/:id",
+  verifyJWT,
+  verifyAdmin,
+  async (req, res) => {
+    const id = req.params.id;
+
+    const { status, feedback } = req.body;
+
+    const application = await trainerApplicationsCollection.findOne({
+      _id: new ObjectId(id),
+    });
+
+    if (!application) {
+      return res.status(404).send({
+        message: "Application not found",
+      });
+    }
+
+    await trainerApplicationsCollection.updateOne(
+      {
+        _id: new ObjectId(id),
       },
       {
         $set: {
-          role: "trainer",
+          status,
+          feedback: feedback || "",
         },
       },
     );
-  }
 
-  res.send({
-    success: true,
-    message: "Application updated",
-  });
-});
+    if (status === "approved") {
+      await usersCollection.updateOne(
+        {
+          email: application.email,
+        },
+        {
+          $set: {
+            role: "trainer",
+          },
+        },
+      );
+    }
+
+    res.send({
+      success: true,
+      message: "Application updated",
+    });
+  },
+);
+
+app.patch("/users/remove-trainer/:id",verifyJWT,
+  verifyAdmin,
+  async (req, res) => {
+    const trainer = await usersCollection.findOne({
+      _id: new ObjectId(req.params.id),
+    });
+
+    if (!trainer) {
+      return res.status(404).send({
+        message: "Trainer not found.",
+      });
+    }
+
+    if (trainer.role !== "trainer") {
+      return res.status(400).send({
+        message: "User is not a trainer.",
+      });
+    }
+
+    const result = await usersCollection.updateOne(
+      {
+        _id: new ObjectId(req.params.id),
+      },
+      {
+        $set: {
+          role: "member",
+        },
+      },
+    );
+
+    res.send(result);
+  },
+);
 
 // Likes and dislike
-app.patch("/forums/react/:id", async (req, res) => {
+app.patch("/forums/react/:id", verifyJWT, async (req, res) => {
   const { email, type } = req.body;
 
   const forum = await forumsCollection.findOne({
@@ -643,7 +871,8 @@ app.patch("/forums/react/:id", async (req, res) => {
 
   if (type === "like") {
     if (likedBy.includes(email)) {
-      return res.status(400).send({
+      return res.send({
+        success: false,
         message: "Already liked",
       });
     }
@@ -673,7 +902,8 @@ app.patch("/forums/react/:id", async (req, res) => {
 
   if (type === "dislike") {
     if (dislikedBy.includes(email)) {
-      return res.status(400).send({
+      return res.send({
+        success: false,
         message: "Already disliked",
       });
     }
@@ -707,7 +937,7 @@ app.patch("/forums/react/:id", async (req, res) => {
 });
 
 // edit a comment
-app.patch("/comments/:id", async (req, res) => {
+app.patch("/comments/:id", verifyJWT, async (req, res) => {
   const { comment } = req.body;
 
   const result = await commentsCollection.updateOne(
@@ -725,7 +955,7 @@ app.patch("/comments/:id", async (req, res) => {
 });
 
 //Add reply to comments
-app.patch("/comments/reply/:id", async (req, res) => {
+app.patch("/comments/reply/:id", verifyJWT, async (req, res) => {
   const reply = req.body;
 
   const result = await commentsCollection.updateOne(
@@ -743,7 +973,7 @@ app.patch("/comments/reply/:id", async (req, res) => {
 });
 
 // Delete replies
-app.patch("/comments/reply/delete/:commentId", async (req, res) => {
+app.patch("/comments/reply/delete/:commentId", verifyJWT, async (req, res) => {
   const { replyId } = req.body;
 
   const result = await commentsCollection.updateOne(
@@ -763,7 +993,7 @@ app.patch("/comments/reply/delete/:commentId", async (req, res) => {
 });
 
 // edit comment
-app.patch("/comments/reply/edit/:commentId", async (req, res) => {
+app.patch("/comments/reply/edit/:commentId", verifyJWT, async (req, res) => {
   const { replyId, reply } = req.body;
 
   const comment = await commentsCollection.findOne({
@@ -802,19 +1032,35 @@ app.patch("/comments/reply/edit/:commentId", async (req, res) => {
 // ================================DELETE=============================================
 
 // Delete route
-app.delete("/classes/:id", async (req, res) => {
-  const id = req.params.id;
+app.delete("/classes/:id", verifyJWT, async (req, res) => {
+  console.log("JWT:", req.decoded.email);
 
-  const query = {
-    _id: new ObjectId(id),
-  };
+  const classData = await classesCollection.findOne({
+    _id: new ObjectId(req.params.id),
+  });
 
-  const result = await classesCollection.deleteOne(query);
+  console.log("CLASS:", classData);
+
+  const result = await classesCollection.deleteOne({
+    _id: new ObjectId(req.params.id),
+    trainerEmail: req.decoded.email,
+  });
+
+  console.log(result);
 
   res.send(result);
 });
+
+app.delete("/admin/classes/:id", verifyJWT, verifyAdmin, async (req, res) => {
+  const result = await classesCollection.deleteOne({
+    _id: new ObjectId(req.params.id),
+  });
+
+  res.send(result);
+});
+
 // users favorite
-app.delete("/favorites/:id", async (req, res) => {
+app.delete("/favorites/:id", verifyJWT, async (req, res) => {
   const id = req.params.id;
 
   const result = await favoritesCollection.deleteOne({
@@ -824,7 +1070,7 @@ app.delete("/favorites/:id", async (req, res) => {
   res.send(result);
 });
 // Delete post from forum
-app.delete("/forums/:id", async (req, res) => {
+app.delete("/forums/:id", verifyJWT, async (req, res) => {
   const id = req.params.id;
 
   const result = await forumsCollection.deleteOne({
@@ -835,7 +1081,7 @@ app.delete("/forums/:id", async (req, res) => {
 });
 
 // Deleting a comment
-app.delete("/comments/:id", async (req, res) => {
+app.delete("/comments/:id", verifyJWT, async (req, res) => {
   const result = await commentsCollection.deleteOne({
     _id: new ObjectId(req.params.id),
   });
@@ -843,17 +1089,9 @@ app.delete("/comments/:id", async (req, res) => {
   res.send(result);
 });
 
-// Delete classes rejected data
-app.delete("/classes/:id", async (req, res) => {
-  const result = await classesCollection.deleteOne({
-    _id: new ObjectId(req.params.id),
-  });
-
-  res.send(result);
-});
-
 // Trainer application delete
-app.delete("/trainer-applications/:id", async (req, res) => {
+app.delete("/trainer-applications/:id", verifyJWT, async (req, res) => {
+  console.log(req.decoded);
   const result = await trainerApplicationsCollection.deleteOne({
     _id: new ObjectId(req.params.id),
   });
@@ -863,32 +1101,6 @@ app.delete("/trainer-applications/:id", async (req, res) => {
 // ==================================AUTH===========================================
 //  Better Auth Routes
 app.use("/api/auth", toNodeHandler(auth));
-
-// app.use("/api/auth", (req, res, next) => {
-//   console.log("================================");
-//   console.log("PATH:", req.path);
-//   console.log("COOKIE HEADER:", req.headers.cookie);
-//   console.log("================================");
-
-//   return toNodeHandler(auth)(req, res, next);
-// });
-
-// app.use("/api/auth", (req, res, next) => {
-//   const originalSetHeader = res.setHeader;
-
-//   res.setHeader = function (name, value) {
-//     if (typeof name === "string" && name.toLowerCase() === "set-cookie") {
-//       console.log("================================");
-//       console.log("SET-COOKIE:");
-//       console.log(value);
-//       console.log("================================");
-//     }
-
-//     return originalSetHeader.call(this, name, value);
-//   };
-
-//   return toNodeHandler(auth)(req, res, next);
-// });
 
 // ================================Database==========================================
 //  Database Connection
