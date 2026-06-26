@@ -135,7 +135,7 @@ https://github.com/ayanstack94b/MomentumX-server
 ### Clone Repository
 
 ```bash
-git clone <server-repository>
+git clone <https://github.com/ayanstack94b/MomentumX-server.git>
 ```
 
 ### Install Dependencies
