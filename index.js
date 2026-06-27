@@ -183,13 +183,13 @@ app.get("/admin/stats", verifyJWT, verifyAdmin, async (req, res) => {
 
   const totalClasses = await classesCollection.countDocuments();
 
-  const totalPosts = await forumsCollection.countDocuments();
+  const totalBookedClasses = await bookingsCollection.countDocuments();
 
   res.send({
     totalUsers,
     totalTrainers,
     totalClasses,
-    totalPosts,
+    totalBookedClasses,
   });
 });
 
