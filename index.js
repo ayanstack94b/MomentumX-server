@@ -77,6 +77,13 @@ app.use(
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  if (req.url.includes("/api/auth")) {
+    console.log("AUTH ROUTE:", req.method, req.url);
+  }
+  next();
+});
+
 /* -----------------------------MongoDB Collections------------------------ */
 
 // MomentumX Database
@@ -445,6 +452,58 @@ app.post("/users", async (req, res) => {
   res.send(result);
 });
 
+app.post("/google-login", async (req, res) => {
+  const { name, email, image } = req.body;
+
+  let user = await usersCollection.findOne({
+    email: {
+      $regex: `^${email}$`,
+      $options: "i",
+    },
+  });
+
+  if (!user) {
+    const newUser = {
+      name,
+      email: email.toLowerCase(),
+      image: image || "",
+
+      role: "member",
+      status: "active",
+
+      membership: "basic",
+
+      trainerApplicationStatus: null,
+      trainerFeedback: "",
+
+      bio: "",
+      phone: "",
+      location: "",
+
+      createdAt: new Date().toISOString(),
+    };
+
+    await usersCollection.insertOne(newUser);
+
+    user = newUser;
+  }
+
+  const token = jwt.sign(
+    {
+      email: user.email,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "7d",
+    },
+  );
+
+  res.send({
+    token,
+    user,
+  });
+});
+
 // Jwt route
 app.post("/jwt", async (req, res) => {
   const { email } = req.body;
@@ -767,7 +826,8 @@ app.patch("/classes/update/:id", verifyJWT, async (req, res) => {
 });
 
 // Trainer accept Reject route
-app.patch("/trainer-applications/:id",
+app.patch(
+  "/trainer-applications/:id",
   verifyJWT,
   verifyAdmin,
   async (req, res) => {
@@ -817,7 +877,9 @@ app.patch("/trainer-applications/:id",
   },
 );
 
-app.patch("/users/remove-trainer/:id",verifyJWT,
+app.patch(
+  "/users/remove-trainer/:id",
+  verifyJWT,
   verifyAdmin,
   async (req, res) => {
     const trainer = await usersCollection.findOne({
@@ -1101,7 +1163,6 @@ app.delete("/trainer-applications/:id", verifyJWT, async (req, res) => {
 // ==================================AUTH===========================================
 //  Better Auth Routes
 app.use("/api/auth", toNodeHandler(auth));
-
 // ================================Database==========================================
 //  Database Connection
 connectDB();
