@@ -623,6 +623,27 @@ app.post("/create-checkout-session", verifyJWT, async (req, res) => {
       category,
       image,
     } = req.body;
+    // Blocked user check
+    const dbUser = await usersCollection.findOne({
+      email: req.decoded.email,
+    });
+
+    if (dbUser?.status === "blocked") {
+      return res.status(403).send({
+        message: "Action restricted by Admin.",
+      });
+    }
+    // Duplicate booking check
+    const alreadyBooked = await bookingsCollection.findOne({
+      classId,
+      memberEmail,
+    });
+
+    if (alreadyBooked) {
+      return res.status(409).send({
+        message: "You have already booked this class.",
+      });
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
