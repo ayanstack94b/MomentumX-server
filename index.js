@@ -369,6 +369,25 @@ app.get("/bookings/class/:classId", verifyJWT, async (req, res) => {
   res.send(result);
 });
 
+app.get("/favorites/check", verifyJWT, async (req, res) => {
+  const { email, classId } = req.query;
+
+  if (email !== req.decoded.email) {
+    return res.status(403).send({
+      message: "Forbidden Access",
+    });
+  }
+
+  const favorite = await favoritesCollection.findOne({
+    userEmail: email,
+    classId,
+  });
+
+  res.send({
+    favorite: !!favorite,
+  });
+});
+
 // Users favorites
 app.get("/favorites/:email", verifyJWT, async (req, res) => {
   const email = req.params.email;
@@ -704,7 +723,7 @@ app.post("/confirm-payment", verifyJWT, async (req, res) => {
     const { sessionId } = req.body;
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-console.log(session.metadata);
+    console.log(session.metadata);
     if (session.payment_status !== "paid") {
       return res.status(400).send({
         success: false,
@@ -1084,7 +1103,16 @@ app.patch(
         },
       },
     );
-
+    await trainerApplicationsCollection.updateOne(
+      {
+        email: trainer.email,
+      },
+      {
+        $set: {
+          status: "demoted",
+        },
+      },
+    );
     res.send(result);
   },
 );
