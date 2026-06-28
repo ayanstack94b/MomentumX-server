@@ -50,8 +50,10 @@ const verifyAdmin = async (req, res, next) => {
 
 const { ObjectId } = require("mongodb");
 const express = require("express");
-console.log("SERVER FILE LOADED");
 const cors = require("cors");
+const Stripe = require("stripe");
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 const { toNodeHandler } = require("better-auth/node");
 
 // MongoDB Connection
@@ -191,6 +193,27 @@ app.get("/admin/stats", verifyJWT, verifyAdmin, async (req, res) => {
     totalClasses,
     totalBookedClasses,
   });
+});
+
+app.get("/transactions", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    const result = await bookingsCollection
+      .find({
+        paymentStatus: "paid",
+      })
+      .sort({
+        paidAt: -1,
+      })
+      .toArray();
+
+    res.send(result);
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).send({
+      message: "Failed to fetch transactions.",
+    });
+  }
 });
 
 // all classes
@@ -582,6 +605,138 @@ app.post("/bookings", verifyJWT, async (req, res) => {
   const result = await bookingsCollection.insertOne(booking);
 
   res.send(result);
+});
+
+app.post("/create-checkout-session", verifyJWT, async (req, res) => {
+  console.log(req.body);
+  try {
+    const {
+      classId,
+      className,
+      trainerName,
+      trainerEmail,
+      price,
+      memberName,
+      memberEmail,
+      schedule,
+      duration,
+      category,
+      image,
+    } = req.body;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+
+      mode: "payment",
+
+      line_items: [
+        {
+          price_data: {
+            currency: "inr",
+
+            product_data: {
+              name: className,
+
+              description: `Trainer: ${trainerName}`,
+            },
+
+            unit_amount: Number(price) * 100,
+          },
+
+          quantity: 1,
+        },
+      ],
+
+      metadata: {
+        classId,
+        className,
+        trainerName,
+        trainerEmail,
+        memberName,
+        memberEmail,
+        schedule,
+        duration,
+        category,
+        image,
+        price: String(price),
+      },
+
+      success_url: `${process.env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+
+      cancel_url: `${process.env.CLIENT_URL}/payment/${classId}`,
+    });
+
+    res.send({
+      url: session.url,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).send({
+      message: "Failed to create checkout session.",
+    });
+  }
+});
+
+app.post("/confirm-payment", verifyJWT, async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+console.log(session.metadata);
+    if (session.payment_status !== "paid") {
+      return res.status(400).send({
+        success: false,
+        message: "Payment not completed.",
+      });
+    }
+
+    const booking = {
+      classId: session.metadata.classId,
+      className: session.metadata.className,
+      trainerName: session.metadata.trainerName,
+      trainerEmail: session.metadata.trainerEmail,
+
+      memberName: session.metadata.memberName,
+      memberEmail: session.metadata.memberEmail,
+
+      schedule: session.metadata.schedule,
+      duration: session.metadata.duration,
+      category: session.metadata.category,
+      image: session.metadata.image,
+
+      price: Number(session.metadata.price),
+
+      paymentStatus: "paid",
+
+      transactionId: session.payment_intent,
+
+      stripeSessionId: session.id,
+
+      bookedAt: new Date().toISOString(),
+
+      paidAt: new Date().toISOString(),
+    };
+
+    const exists = await bookingsCollection.findOne({
+      stripeSessionId: session.id,
+    });
+
+    if (!exists) {
+      await bookingsCollection.insertOne(booking);
+    }
+
+    res.send({
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).send({
+      success: false,
+      message: "Failed to verify payment.",
+    });
+  }
 });
 
 app.post("/trainer-applications", verifyJWT, async (req, res) => {
