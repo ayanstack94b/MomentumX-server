@@ -1,6 +1,6 @@
 # 🚀 MomentumX - Fitness & Gym Management Platform (Server)
 
-The MomentumX Server is the backend REST API powering the MomentumX Fitness & Gym Management Platform. It handles authentication, authorization, user management, trainer applications, class management, bookings, favorites, community forums, comments, and administrative operations using a secure role-based architecture.
+The MomentumX Server is the backend REST API powering the MomentumX Fitness & Gym Management Platform. It handles authentication, authorization, user management, trainer applications, fitness class management, bookings, Stripe transactions, favorites, community forums, comments, and administrative operations using a secure role-based architecture.
 
 ---
 
@@ -19,6 +19,7 @@ https://github.com/ayanstack94b/MomentumX-Client
 ## 🔗 Server Repository
 
 https://github.com/ayanstack94b/MomentumX-server
+
 ---
 
 # ✨ Backend Features
@@ -31,7 +32,10 @@ https://github.com/ayanstack94b/MomentumX-server
 * 📋 Trainer Application Management
 * ❤️ Favorite Classes API
 * 📅 Booking Management
+* 💳 Stripe Payment Integration
+* 💰 Transaction History API
 * 💬 Community Forum APIs
+* 🖼️ Forum Image URL Storage
 * 👍 Like & Dislike System
 * 💭 Comment Management
 * 🚫 Soft Block User Protection
@@ -48,6 +52,7 @@ https://github.com/ayanstack94b/MomentumX-server
 * MongoDB
 * JWT (jsonwebtoken)
 * Better Auth
+* Stripe
 * dotenv
 * cors
 
@@ -95,7 +100,17 @@ https://github.com/ayanstack94b/MomentumX-server
 
 * Book Fitness Classes
 * Prevent Duplicate Bookings
+* Store Payment Status
+* Store Transaction ID
 * View User Bookings
+
+### Payments
+
+* Stripe Checkout Session
+* Payment Verification
+* Store Transaction History
+* Revenue Tracking
+* Transaction API
 
 ### Favorites
 
@@ -106,6 +121,8 @@ https://github.com/ayanstack94b/MomentumX-server
 ### Community Forum
 
 * Create Forum Post
+* Store ImageBB Image URL
+* Template Image Support
 * Delete Forum Post
 * Like / Dislike Posts
 * Pagination
@@ -113,7 +130,9 @@ https://github.com/ayanstack94b/MomentumX-server
 ### Comments
 
 * Add Comment
+* Edit Comment
 * Delete Comment
+* Reply to Comments
 * Blocked User Validation
 
 ---
@@ -122,11 +141,13 @@ https://github.com/ayanstack94b/MomentumX-server
 
 * JWT Verification Middleware
 * Admin Authorization Middleware
+* Trainer Authorization Middleware
 * Protected CRUD Operations
 * Role-Based API Access
-* MongoDB Credentials Secured with Environment Variables
-* Sensitive Keys Hidden Using dotenv
 * Soft Block Protection for Restricted Users
+* MongoDB Credentials Secured with Environment Variables
+* Stripe Secret Key Secured with Environment Variables
+* Sensitive Keys Hidden Using dotenv
 
 ---
 
@@ -135,7 +156,7 @@ https://github.com/ayanstack94b/MomentumX-server
 ### Clone Repository
 
 ```bash
-git clone <https://github.com/ayanstack94b/MomentumX-server.git>
+git clone https://github.com/ayanstack94b/MomentumX-server.git
 ```
 
 ### Install Dependencies
@@ -154,25 +175,22 @@ npm start
 
 # ⚙️ Environment Variables
 
-Create a `.env` file in the project root.
+MomentumX uses environment variables to securely manage application configuration and sensitive credentials.
 
-```env
-PORT=5000
-
-DB_USER=
-DB_PASS=
-
-JWT_SECRET=
-
-BETTER_AUTH_SECRET=
-BETTER_AUTH_URL=
-```
+* MongoDB Configuration
+* JWT Secret
+* Better Auth Configuration
+* Google OAuth Credentials
+* Client URL
+* Stripe Secret Key
+* Server Port
+* ImageBB Secrete Key
 
 ---
 
 # 📂 Project Structure
 
-```
+```text
 📦 MomentumX Server
 │
 ├── config
@@ -180,6 +198,10 @@ BETTER_AUTH_URL=
 │
 ├── lib
 │   └── auth.js
+│
+├── middleware
+│
+├── routes
 │
 ├── index.js
 ├── package.json
@@ -194,9 +216,12 @@ BETTER_AUTH_URL=
 * MongoDB Database Integration
 * Secure JWT Authentication
 * Better Auth Support
+* Stripe Checkout Integration
+* Transaction History Management
 * Protected Role-Based Routes
 * Trainer Application Workflow
 * Community Forum Management
+* ImageBB Image URL Storage
 * Booking & Favorites Management
 * Search, Filter & Pagination
 * Robust Error Handling
